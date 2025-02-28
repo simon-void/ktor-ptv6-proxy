@@ -1,0 +1,16 @@
+ktor:
+  deployment:
+    host: "$HOST:0.0.0.0"
+    port: "$PORT:8080"
+  application:
+    modules:
+      - de.gmx.simonvoid.ptv6proxy.AppKt.module
+
+# further configuration via environment properties:
+environment:
+  # the url of the PTV5+ connector that should act like a PTV6-connector
+  connectorUrl: "$PTV5PLUS_CONNECTOR_URL:"
+  # optional proxyUrl to use to forward requests over another proxy
+  proxyUrl: "$PROXY_URL:"
+  # the timeout in seconds of the call to the connector
+  timeout: "$TIMEOUT_IN_SEC:10"
