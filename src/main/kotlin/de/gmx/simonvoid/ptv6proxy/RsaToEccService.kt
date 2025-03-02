@@ -5,7 +5,9 @@ import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
+import io.ktor.server.application.*
 import io.ktor.server.request.*
+import io.ktor.server.response.*
 import io.ktor.util.*
 import io.ktor.utils.io.*
 import org.slf4j.Logger
@@ -30,11 +32,12 @@ class RsaToEccService(
         ExternalAuthenticateMod,
     )
 
-    suspend fun handleRequest(req: ApplicationRequest): Response {
+    suspend fun handleRequest(call: ApplicationCall) {
         val startTimeNanos = System.nanoTime()
         // since this is a concurrent function, let's generate a random traceId to allow request tracing
         val traceId = TraceId.next()
         return try {
+            val req = call.request
             val headers: Headers = req.headers
             log.info("$traceId ${req.httpMethod} received request with uri: ${req.uri} and headers: ${headers.toMap()}")
 
@@ -52,16 +55,15 @@ class RsaToEccService(
                 } ?: body
             }
 
-            val response: HttpResponse = client.postToConnector(headers, bodyToForward, traceId).getOrThrow()
-
-            Response.fromHttpResponse( response, defaultContentType = ContentType.Application.Xml)
+            val res: HttpResponse = client.postToConnector(headers, bodyToForward, traceId).getOrThrow()
+            call.respondWithHttpResponse(res)
 
         } catch (e: Throwable) {
             log.error("$traceId request failed with exception: $e", e)
-            Response.fromText(
+            call.respondText(
                 text = e.toString(),
                 contentType = ContentType.Text.Plain,
-                statusCode = HttpStatusCode.BadGateway,
+                status = HttpStatusCode.BadGateway,
             )
         } finally {
             val requestDuration = (System.nanoTime()-startTimeNanos).nanoseconds
@@ -110,7 +112,7 @@ class RsaToEccService(
         val curlCommand = buildString {
             append("""$traceId equivalent curl query: echo "${body.encodeBase64()}" | base64 -d |curl -v -X POST""")
             config.proxyUrl?.let { append(" --proxy $it") }
-            headers.forEach { name, values ->
+            headers.forEach { (name, values) ->
                 values.forEach { value ->
                     append(""" -H "$name: $value"""")
                 }
@@ -118,5 +120,14 @@ class RsaToEccService(
             append(" --data-binary @- ${config.connectorUrl}")
         }
         this.info(curlCommand)
+    }
+
+    private suspend fun ApplicationCall.respondWithHttpResponse(res: HttpResponse) {
+        this.respondBytesWriter(
+            contentType = res.contentType(),
+            status = res.status
+        ) {
+            res.bodyAsChannel().copyAndClose(this)
+        }
     }
 }
