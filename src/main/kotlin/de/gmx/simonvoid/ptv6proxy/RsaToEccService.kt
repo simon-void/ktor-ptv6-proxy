@@ -50,7 +50,7 @@ class RsaToEccService(
                     } else {
                         val modifiedBody = rule.modifyBody(body)
                         log.info("$traceId modified body for soapAction: $soapAction to base64: ${modifiedBody.encodeBase64()}")
-                        modifiedBody.toByteArray(Charsets.UTF_8)
+                        modifiedBody
                     }
                 } ?: body
             }

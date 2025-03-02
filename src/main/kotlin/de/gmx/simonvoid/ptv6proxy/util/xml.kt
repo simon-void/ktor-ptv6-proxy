@@ -5,6 +5,7 @@ import org.jdom2.Element
 import org.jdom2.input.DOMBuilder
 import org.jdom2.output.Format
 import org.jdom2.output.XMLOutputter
+import java.io.ByteArrayOutputStream
 import javax.xml.parsers.DocumentBuilder
 import javax.xml.parsers.DocumentBuilderFactory
 
@@ -25,12 +26,20 @@ fun parseDocument(xmlBytes: ByteArray): Document {
     return jdomDocument
 }
 
-fun Document.serialize(format: Format = Format.getPrettyFormat()): String = XMLOutputter(format).outputString(this)
-
-fun String.normalizeXML(): String {
-    val doc = parseDocument(this.toByteArray())
-    return doc.serialize(format = Format.getCompactFormat())
+fun Document.serialize(
+    format: Format = Format.getCompactFormat(),
+    capacity: Int = 2048,
+): ByteArray = ByteArrayOutputStream(capacity).let { outStream ->
+    XMLOutputter(format).output(this, outStream)
+    outStream.toByteArray()
 }
+
+fun ByteArray.normalizeXML(): String {
+    val doc = parseDocument(this)
+    return doc.serialize(format = Format.getCompactFormat(), capacity = this.size).decodeToString()
+}
+
+fun String.normalizeXML(): String = this.toByteArray().normalizeXML()
 
 fun Document.single(path: String, separator: Char = '.'): Element {
     val names = path.split(separator).filter { it.isNotBlank() }
