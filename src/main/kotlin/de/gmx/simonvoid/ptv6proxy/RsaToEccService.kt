@@ -39,7 +39,7 @@ class RsaToEccService(
         return try {
             val req = call.request
             val headers: Headers = req.headers
-            log.info("$traceId ${req.httpMethod} received request with uri: ${req.uri} and headers: ${headers.toMap()}")
+            log.info("$traceId ${req.httpMethod} received request with path: ${req.path()} and headers: ${headers.toMap()}")
 
             val bodyToForward: ByteArray = run {
                 val body: ByteArray = req.receiveChannel().toByteArray()
@@ -55,7 +55,8 @@ class RsaToEccService(
                 } ?: body
             }
 
-            val res: HttpResponse = client.postToConnector(headers, bodyToForward, traceId).getOrThrow()
+            val connectorUrl = config.connectorUrl + req.path()
+            val res: HttpResponse = client.post(connectorUrl, headers, bodyToForward, traceId).getOrThrow()
             call.respondWithHttpResponse(res)
 
         } catch (e: Throwable) {
@@ -71,7 +72,8 @@ class RsaToEccService(
         }
     }
 
-    private suspend fun HttpClient.postToConnector(
+    private suspend fun HttpClient.post(
+        url: String,
         allHeaders: Headers,
         body: ByteArray,
         traceId: TraceId,
@@ -83,14 +85,14 @@ class RsaToEccService(
                 ) return@mapNotNull null
                 name to values
             }.toMap()
-        log.logPostRequestAsCurl(headers, body, traceId)
+        log.logPostRequestAsCurl(url, headers, body, traceId)
 
         val response: Result<HttpResponse> = run {
             val client = this
             val timedResponse = measureTimedValue {
-                log.info("$traceId requesting POST ${config.connectorUrl}")
+                log.info("$traceId requesting POST $url")
                 runCatchingButAllowCancel {
-                    client.post(config.connectorUrl) {
+                    client.post(url) {
                         headers.forEach { (name, values) ->
                             if (!(name.equals("host", true) || name.equals("contentLength", true))) {
                                 this.headers.appendAll(name, values)
@@ -108,7 +110,11 @@ class RsaToEccService(
         return response
     }
 
-    private fun Logger.logPostRequestAsCurl(headers: Map<String, List<String>>, body: ByteArray, traceId: TraceId) {
+    private fun Logger.logPostRequestAsCurl(
+        url: String,
+        headers: Map<String, List<String>>,
+        body: ByteArray, traceId: TraceId,
+    ) {
         val curlCommand = buildString {
             append("""$traceId equivalent curl query: echo "${body.encodeBase64()}" | base64 -d |curl -v -X POST""")
             config.proxyUrl?.let { append(" --proxy $it") }
@@ -117,7 +123,7 @@ class RsaToEccService(
                     append(""" -H "$name: $value"""")
                 }
             }
-            append(" --data-binary @- ${config.connectorUrl}")
+            append(" --data-binary @- $url")
         }
         this.info(curlCommand)
     }

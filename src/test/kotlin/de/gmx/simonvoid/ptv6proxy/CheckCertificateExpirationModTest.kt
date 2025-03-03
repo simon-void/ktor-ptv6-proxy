@@ -9,28 +9,10 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class CheckCertificateExpirationModTest {
+
     @Test
     fun `test check Certificate Expiration without crypt tag gets tag ECC`() {
-        val checkCertExpXmlWithCryptTag = """
-            <SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/"
-                               xmlns:m0="http://ws.gematik.de/conn/ConnectorCommon/v5.0"
-                               xmlns:m1="http://ws.gematik.de/conn/ConnectorContext/v2.0">
-                <SOAP-ENV:Body>
-                    <m:CheckCertificateExpiration xmlns:m="http://ws.gematik.de/conn/CertificateService/v6.0">
-                        <m0:CardHandle>someCardHandle</m0:CardHandle>
-                        <m1:Context>
-                            <m0:MandantId>someMandantId</m0:MandantId>
-                            <m0:ClientSystemId>someClientSystemId</m0:ClientSystemId>
-                            <m0:WorkplaceId>someWorkplaceId</m0:WorkplaceId>
-                            <m0:UserId>User1</m0:UserId>
-                        </m1:Context>
-                    </m:CheckCertificateExpiration>
-                </SOAP-ENV:Body>
-            </SOAP-ENV:Envelope>
-            """.trimIndent()
-
-        val modifiedCheckCertExpXML = CheckCertificateExpirationMod.modifyBody(checkCertExpXmlWithCryptTag.toByteArray())
-
+        val modifiedCheckCertExpXML = CheckCertificateExpirationMod.modifyBody(checkCertExpXmlWithoutCryptTag.toByteArray())
         assertEquals(getCheckCertificateExpirationXmlWithCryptValue("ECC").normalizeXML(), modifiedCheckCertExpXML.normalizeXML())
     }
 
@@ -54,7 +36,26 @@ class CheckCertificateExpirationModTest {
         }
     }
 
-    private fun getCheckCertificateExpirationXmlWithCryptValue(cryptValue: String): String = """
+    companion object {
+        val checkCertExpXmlWithoutCryptTag = """
+            <SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/"
+                               xmlns:m0="http://ws.gematik.de/conn/ConnectorCommon/v5.0"
+                               xmlns:m1="http://ws.gematik.de/conn/ConnectorContext/v2.0">
+                <SOAP-ENV:Body>
+                    <m:CheckCertificateExpiration xmlns:m="http://ws.gematik.de/conn/CertificateService/v6.0">
+                        <m0:CardHandle>someCardHandle</m0:CardHandle>
+                        <m1:Context>
+                            <m0:MandantId>someMandantId</m0:MandantId>
+                            <m0:ClientSystemId>someClientSystemId</m0:ClientSystemId>
+                            <m0:WorkplaceId>someWorkplaceId</m0:WorkplaceId>
+                            <m0:UserId>User1</m0:UserId>
+                        </m1:Context>
+                    </m:CheckCertificateExpiration>
+                </SOAP-ENV:Body>
+            </SOAP-ENV:Envelope>
+            """.trimIndent()
+
+        fun getCheckCertificateExpirationXmlWithCryptValue(cryptValue: String): String = """
         <SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/"
                            xmlns:m0="http://ws.gematik.de/conn/ConnectorCommon/v5.0"
                            xmlns:m1="http://ws.gematik.de/conn/ConnectorContext/v2.0">
@@ -72,4 +73,5 @@ class CheckCertificateExpirationModTest {
             </SOAP-ENV:Body>
         </SOAP-ENV:Envelope>
         """.trimIndent()
+    }
 }

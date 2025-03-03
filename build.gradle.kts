@@ -33,9 +33,10 @@ dependencies {
     implementation("io.ktor:ktor-server-config-yaml-jvm")
     implementation("io.ktor:ktor-client-core")
     implementation("io.ktor:ktor-client-apache5")
-    val koinVersion = "4.0.2"
-    runtimeOnly("io.insert-koin:koin-core:$koinVersion")
-    implementation("io.insert-koin:koin-ktor:$koinVersion")
+    "4.0.2".let { koinVersion ->
+        runtimeOnly("io.insert-koin:koin-core:$koinVersion")
+        implementation("io.insert-koin:koin-ktor:$koinVersion")
+    }
     implementation("ch.qos.logback:logback-classic:1.5.15")
     // xml
     implementation("org.jdom:jdom2:2.0.6.1")
@@ -46,6 +47,10 @@ dependencies {
     testImplementation(kotlin("test-junit5")) //kotlin-test-junit5
     testImplementation("io.kotest:kotest-runner-junit5:5.9.1")
     testImplementation("io.mockk:mockk:1.13.14")
+    "5.15.0".let { mockserverVersion ->
+        testImplementation("org.mock-server:mockserver-netty-no-dependencies:$mockserverVersion")
+        testImplementation("org.mock-server:mockserver-client-java-no-dependencies:$mockserverVersion")
+    }
 }
 
 tasks.test {
